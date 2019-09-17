@@ -25,9 +25,11 @@ import os
 import subprocess
 import gzip
 import shutil
+import logging
 import googleapiclient.discovery
+from distutils.util import strtobool
 from google.cloud import storage
-import tpu_manager
+import tpu_manager # Requires tpu_manager.py in the same CWD.
 
 # Compute and TPU variables. If you do not have environment variables
 # set on the system or container, the script uses the values that you
@@ -39,13 +41,13 @@ TPU_TYPE = os.environ.get('TPU_TYPE', 'v2-8')
 FRAMEWORK = os.environ.get('FRAMEWORK', '1.14')
 JOB_ID = os.environ.get('JOB_ID', '{project}-tpu-{uid}'.format(
     project=PROJECT, uid=str(uuid.uuid4())))
-PREEMPTIBLE_TPU = os.environ.get('PREEMPTIBLE_TPU', 'false')
-RESERVED_TPU = os.environ.get('RESERVED_TPU', 'false')
-TPU_ADDRESS = os.environ.get('TPU_ADDRESS', None)
+PREEMPTIBLE_TPU = strtobool(os.environ.get('PREEMPTIBLE_TPU', 'False'))
+RESERVED_TPU = strtobool(os.environ.get('RESERVED_TPU', 'False'))
+TPU_ADDRESS = os.environ.get('TPU_ADDRESS', 'None')
 
 # Cloud Storage variables
 STORAGE_LOCATION = os.environ.get('STORAGE_LOCATION', 'us-central1')
-PREPROCESS = os.environ.get('PREPROCESS', 'false')
+PREPROCESS = strtobool(os.environ.get('PREPROCESS', 'True'))
 DATA_DIR = os.environ.get('DATA_DIR', 'data/')
 OUTPUT_DIR = os.environ.get('OUTPUT_DIR', 'output/')
 
@@ -57,15 +59,35 @@ CORE_RATIO = 4
 ITERATIONS = os.environ.get('ITERATIONS', '4000')
 TRAIN_STEPS = os.environ.get('TRAIN_STEPS', '10000')
 
+# [START run_command_local]
+def execute(cmd, cwd=None, capture_output=False, env=None, raise_errors=True):
+    """Execute an external command (wrapper for Python subprocess)."""
+    logging.info('Executing command: {cmd}'.format(cmd=str(cmd)))
+    stdout = subprocess.PIPE if capture_output else None
+    process = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=stdout)
+    output = process.communicate()[0]
+    returncode = process.returncode
+    if returncode:
+        # Error
+        if raise_errors:
+            raise subprocess.CalledProcessError(returncode, cmd)
+        else:
+            logging.info('Command returned error status %s', returncode)
+    if output:
+        logging.info(output)
+    return returncode, output
+# [END run_command_local]
+
 # [START preprocess_mnist]
 def preprocess_mnist():
     '''
     Define the steps for pre-processing data before training your model.
     '''
-    subprocess.run([
+    execute([
         'python3',
         './convert_to_records.py',
         '--directory=./{path}'.format(path=DATA_DIR)])
+
     # Unzip the `.gz` files created by the pre-processing script.
     for root, subdirs, files in os.walk('./{path}'.format(path=DATA_DIR)):
         for file in files:
@@ -80,7 +102,7 @@ def preprocess_mnist():
                     f_in.close()
                     f_out.close()
                     os.remove(p_in)
-# [END preprocess]
+# [END preprocess_mnist]
 
 # [START train_mnist]
 def train_mnist():
@@ -89,7 +111,7 @@ def train_mnist():
     starts a subprocess to run the `mnist_tpu.py` script. Optionally you can
     import your TF module and run it within Python.
     '''
-    subprocess.run([
+    execute([
         'python3',
         './models/official/mnist/mnist_tpu.py',
         '--tpu={tpu_name}'.format(tpu_name=JOB_ID),
@@ -175,9 +197,8 @@ def main():
     # Start the training process now that the resources are in place.
     try:
         train_mnist()
-    except Exception:
-        raise Exception('Training failed.')
-        pass
+    except Exception as e:
+        logging.exception(e)
     # [END training]
 
     # [START cleanup]
@@ -188,10 +209,8 @@ def main():
 
     # If your application needs to deploy the trained model immediately,
     # you can download the results of this training run to a local directory.
-    tpu_manager.download_blobs(storage,
-        bucket.name,
-        OUTPUT_DIR,
-        'results-{id}'.format(id=JOB_ID))
+    tpu_manager.download_blobs(storage, bucket.name, OUTPUT_DIR,
+                               'results-{id}'.format(id=JOB_ID))
 
     # Delete the `DATA_DIR` and keep the `OUTPUT_DIR` with the results for
     # another application that needs those results to run inference processes.
