@@ -61,8 +61,8 @@ def delete_blobs(storage, bucket_name, prefix, delete_all=False):
     have a specified prefix. Require delete_all=True to delete all files
     in the bucket, which prevents accidental deletions due to empty prefix
     values.'''
-    if prefix == '' and delete_all != False:
-        raise ValueError('You must specify both prefix=\'\' and '
+    if prefix == '' and delete_all == False:
+        raise ValueError('You must specify both prefix='' and '
                          'delete_all=True to delete all objects from '
                          'the bucket.')
     client = storage.Client()
