@@ -34,7 +34,7 @@ import tpu_manager # Requires tpu_manager.py in the same CWD.
 # Compute and TPU variables. If you do not have environment variables
 # set on the system or container, the script uses the values that you
 # specify here.
-PROJECT = os.environ.get('PROJECT', 'my-project')
+PROJECT = os.environ.get('GCLOUD_PROJECT', 'my-project')
 NETWORK = os.environ.get('NETWORK', 'default')
 ZONE = os.environ.get('ZONE', 'us-central1-c')
 TPU_TYPE = os.environ.get('TPU_TYPE', 'v2-8')
@@ -209,6 +209,7 @@ def main():
 
     # If your application needs to deploy the trained model immediately,
     # you can download the results of this training run to a local directory.
+    # Alternatively, another application can read the results from the bucket.
     tpu_manager.download_blobs(storage, bucket.name, OUTPUT_DIR,
                                'results-{id}'.format(id=JOB_ID))
 
