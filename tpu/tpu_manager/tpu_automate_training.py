@@ -34,13 +34,13 @@ import tpu_manager # Requires tpu_manager.py in the same CWD.
 # Compute and TPU variables. If you do not have environment variables
 # set on the system or container, the script uses the values that you
 # specify here.
-PROJECT = os.environ.get('GCLOUD_PROJECT', 'my-project')
+PROJECT_ID = os.environ.get('PROJECT_ID', 'my-project')
 NETWORK = os.environ.get('NETWORK', 'default')
 ZONE = os.environ.get('ZONE', 'us-central1-c')
 TPU_TYPE = os.environ.get('TPU_TYPE', 'v2-8')
 FRAMEWORK = os.environ.get('FRAMEWORK', '1.14')
 JOB_ID = os.environ.get('JOB_ID', '{project}-tpu-{uid}'.format(
-    project=PROJECT, uid=str(uuid.uuid4())))
+    project=PROJECT_ID, uid=str(uuid.uuid4())))
 PREEMPTIBLE_TPU = strtobool(os.environ.get('PREEMPTIBLE_TPU', 'False'))
 RESERVED_TPU = strtobool(os.environ.get('RESERVED_TPU', 'False'))
 TPU_ADDRESS = os.environ.get('TPU_ADDRESS', 'None')
@@ -68,6 +68,7 @@ def execute(cmd, cwd=None, capture_output=False, env=None, raise_errors=True):
     output = process.communicate()[0]
     returncode = process.returncode
     if returncode:
+        # Error
         if raise_errors:
             raise subprocess.CalledProcessError(returncode, cmd)
         else:
@@ -123,7 +124,7 @@ def train_mnist():
         '--iterations={iterations}'.format(iterations=ITERATIONS),
         '--train_steps={train_steps}'.format(train_steps=TRAIN_STEPS),
         '--tpu_zone={zone}'.format(zone=ZONE),
-        '--gcp_project={project}'.format(project=PROJECT),
+        '--gcp_project={project}'.format(project=PROJECT_ID),
         '--use_tpu=True'
         ])
 # [END train_mnist]
@@ -171,7 +172,7 @@ def main():
     try:
         cidr = tpu_manager.reserve_cidr(
             compute,
-            PROJECT,
+            PROJECT_ID,
             NETWORK,
             JOB_ID,
             33-(max(8, int(TPU_TYPE.split('-')[1])//CORE_RATIO).bit_length()),
@@ -181,7 +182,7 @@ def main():
 
     # Start the TPU node right before you submit the job.
     tpu_node = tpu_manager.create_tpus(
-        tpu, PROJECT, JOB_ID, NETWORK, ZONE, TPU_TYPE, FRAMEWORK, cidr,
+        tpu, PROJECT_ID, JOB_ID, NETWORK, ZONE, TPU_TYPE, FRAMEWORK, cidr,
         preemptible=PREEMPTIBLE_TPU, reserved=RESERVED_TPU
     )
 
@@ -203,8 +204,8 @@ def main():
     # [START cleanup]
     # Clean up Cloud Platform resources to reduce costs.
     print('Cleaning up unused resources.')
-    tpu_manager.delete_tpus(tpu, PROJECT, ZONE, JOB_ID)
-    tpu_manager.release_cidr(compute, PROJECT, JOB_ID)
+    tpu_manager.delete_tpus(tpu, PROJECT_ID, ZONE, JOB_ID)
+    tpu_manager.release_cidr(compute, PROJECT_ID, JOB_ID)
 
     # If your application needs to deploy the trained model immediately,
     # you can download the results of this training run to a local directory.
