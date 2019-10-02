@@ -41,13 +41,13 @@ TPU_TYPE = os.environ.get('TPU_TYPE', 'v2-8')
 FRAMEWORK = os.environ.get('FRAMEWORK', '1.14')
 JOB_ID = os.environ.get('JOB_ID', '{project}-tpu-{uid}'.format(
     project=PROJECT_ID, uid=str(uuid.uuid4())))
-PREEMPTIBLE_TPU = strtobool(os.environ.get('PREEMPTIBLE_TPU', 'False'))
-RESERVED_TPU = strtobool(os.environ.get('RESERVED_TPU', 'False'))
-TPU_ADDRESS = os.environ.get('TPU_ADDRESS', 'None')
+PREEMPTIBLE_TPU = bool(strtobool(os.environ.get('PREEMPTIBLE_TPU', 'False')))
+RESERVED_TPU = bool(strtobool(os.environ.get('RESERVED_TPU', 'False')))
+TPU_ADDRESS = os.environ.get('TPU_ADDRESS', None)
 
 # Cloud Storage variables
 STORAGE_LOCATION = os.environ.get('STORAGE_LOCATION', 'us-central1')
-PREPROCESS = strtobool(os.environ.get('PREPROCESS', 'True'))
+PREPROCESS = bool(strtobool(os.environ.get('PREPROCESS', 'True')))
 DATA_DIR = os.environ.get('DATA_DIR', 'data/')
 OUTPUT_DIR = os.environ.get('OUTPUT_DIR', 'output/')
 
