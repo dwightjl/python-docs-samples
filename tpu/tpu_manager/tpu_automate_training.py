@@ -68,7 +68,6 @@ def execute(cmd, cwd=None, capture_output=False, env=None, raise_errors=True):
     output = process.communicate()[0]
     returncode = process.returncode
     if returncode:
-        # Error
         if raise_errors:
             raise subprocess.CalledProcessError(returncode, cmd)
         else:
